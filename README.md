@@ -2,7 +2,132 @@
 
 ![image](https://user-images.githubusercontent.com/75567246/197397769-2711c2a1-72b9-47dc-9368-dac558237462.png)
 
-# Certicates
+
+
+
+
+<details><summary> Raspberry Pi: network boot and NFS mount</summary>
+
+## Preparing for bootp, PXE boot
+
+
+* We will create the RASPI directory, dedicated to the “filesystem” of the Raspberry PI, the directory will occupy around 3GB in use:
+
+```
+$ mkdir RASPI
+$ cd RASP
+```
+
+* a client directory containing the entire Raspbian system of the Raspberry (directories /etc,
+/home, /bin, etc.) which will be accessible by the NFS protocol;
+
+```
+~/RASP $ mkdir client
+
+```
+
+*  a boot directory containing the kernel and “low-level” files for the Raspberry Pi itself,
+which will be accessible by the bootp protocol;
+
+```
+~/RASP $ mkdir boot
+```
+
+
+We will download the “Raspbian lite” distribution from the official Raspberry PI website and put it in
+your RASPI directory.
+
+```
+$ wget https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/2021-10-30-raspios-bullseye-armhf-lite.zip
+$ unzip 2021-10-30-raspios-bullseye-armhf-lite.zip
+```
+
+We will retrieve the contents of the two partitions of this distribution to fill our two directories:
+
+* the raspbian filesystem in the client directory from partition #2:
+
+```
+$ unzip 2021-10-30-raspios-bullseye-armhf-lite.zip
+$ sudo losetup -fP 2021-10-30-raspios-bullseye-armhf-lite.img
+$ losetup -a | grep rasp
+/dev/loop39: []: (/home/pef/2021-10-30-raspios-bullseye-armhf-lite.img)
+$ sudo mount /dev/loop39p2 /mnt
+
+~RASPI $ sudo rsync -xa --progress /mnt/ client/
+~RASPI $ sudo umount /mnt
+```
+
+* the "boot" files from partition #1:
+
+```
+~RASPI $ sudo mount /dev/loop39p1 /mnt
+~RASPI $ cp -r /mnt/* boot/
+```
+
+
+
+# NFS Server
+
+### installation 
+
+```
+ $ sudo apt install nfs-kernel-server
+```
+
+### Configuring the NFS share in the /etc/exports file:
+
+```
+:/etc $ cat exports
+# /etc/exports: the access control list for filesystems which may be exported
+# to NFS clients. See exports(5).
+#
+# Example for NFSv2 and NFSv3:
+# /srv/homes hostname1(rw,sync,no_subtree_check)
+hostname2(ro,sync,no_subtree_check)
+#
+# Example for NFSv4:
+# /srv/nfs4 gss/krb5i(rw,sync,fsid=0,crossmnt,no_subtree_check)
+# /srv/nfs4/homes gss/krb5i(rw,sync,no_subtree_check)
+#
+~/RASPI/client *(rw,sync,no_subtree_check,no_root_squash)
+~/RASPI/boot *(rw,sync,no_subtree_check,no_root_squash)
+```
+
+### Enable the NFS and RPCBind service:
+
+```
+$ sudo systemctl enable nfs-kernel-server
+$ sudo systemctl enable rpcbind
+```
+
+### If you modify the configuration of an export, you must restart the NFS service:
+
+```
+$ sudo systemctl restart nfs-kernel-server
+```
+
+### To see the mount points offered by an NFS server:
+
+```
+$ showmount -e 127.0.0.1
+Export list for 127.0.0.1:
+~/RASPI/boot *
+~/RASPI/client *
+```
+
+</details>
+
+
+
+
+
+
+
+
+
+<details><summary>Certicates</summary>
+
+
 
 ## Generation of private keys for the CA, the server and the client.
 ```
@@ -116,6 +241,10 @@ To subcribe a topic using the username nguyen.nguyen.doan and pass 1234 and a se
 pi@raspberrypi:~ $ mosquitto_sub -h mqtt.com -p 8883 -u tmc -P iot -t '/esp8266' --cafile ecc.ca.pem --cert ecc.raspberry.pem --key ecc.raspberry.key.pem
 
 ```
+
+
+</details>
+
 
 
 # Mongoose os
