@@ -61,14 +61,64 @@ $ openssl x509 -req -days 3650 -CA ecc.ca.pem -CAkey ecc.ca.key.pem -CAcreateser
 
 
 ```
+# Mosquitto conf
+
+We copy ecc.ca.pem ecc.raspberry.pem and ecc.raspberry.key.pem to the /etc/mosquitto/ directories:
+
+```
+pi@raspberrypi:~ $
+$ sudo cp /CERTIFICATES/ecc.ca.pem /etc/mosquitto/ca_certificates/
+$ sudo cp /CERTIFICATES/ecc.raspberry.pem /etc/mosquitto/certs/
+$ sudo cp /CERTIFICATES/ecc.raspberry.key.pem /etc/mosquitto/certs/
+
+```
+
+### add mosquitto user 
+```
+sudo chown mosquitto:mosquitto  /etc/mosquitto/ca_certificates/ecc.ca.pem
+sudo chown mosquitto:mosquitto  /etc/mosquitto/certs/ecc.raspberry.pem
+sudo chown mosquitto:mosquitto  /etc/mosquitto/certs/ecc.raspberry.key.pem
+
+```
+
+### They are referenced in the /etc/mosquitto/mosquitto.conf file like this:
+
+```
+allow_anonymous false
+password_file /etc/mosquitto/mosquitto_passwd
+
+listener 8883
+cafile /etc/mosquitto/ca_certificates/ecc.ca.pem
+certfile /etc/mosquitto/certs/ecc.raspberry.pem
+keyfile /etc/mosquitto/certs/ecc.raspberry.key.pem
+require_certificate true
+
+```
+
+### After copying the files, modifying the mosquitto.conf file and adding new user, we must restart the server:
+
+```
+pi@raspberrypi:~ $ sudo systemctl restart mosquitto.service
+```
+
+### Test MQTT server TLS connection
+
+To publish a topic using the username nguyen.nguyen.doan and pass 1234 and a client certificate (certificate for esp8266)
+
+```
+pi@raspberrypi:~ $ mosquitto_pub -h mqtt.com -p 8883 -u tmc -P iot -t '/esp8266' --cafile ecc.ca.pem --cert ecc.esp8266.pem --key ecc.esp8266.key.pem -m 'Hey'
+
+```
+
+To subcribe a topic using the username nguyen.nguyen.doan and pass 1234 and a server certificate (certificate for raspberry)
+
+```
+pi@raspberrypi:~ $ mosquitto_sub -h mqtt.com -p 8883 -u tmc -P iot -t '/esp8266' --cafile ecc.ca.pem --cert ecc.raspberry.pem --key ecc.raspberry.key.pem
+
+```
 
 
-
-
-
-
-
-
+# Mongoose os
 
 
 
