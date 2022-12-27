@@ -835,6 +835,55 @@ my-app $ sudo mos flash
 
 <details><summary>LoRa communication on the Raspberry Pi</summary>
 
+ ### To activate the SPI bus used by the LoRa component, you will modify the follow file at the end.
+ 
+***RASPI/boot/config.txt***
+ 
+ 
+ ![image](https://user-images.githubusercontent.com/75567246/209676562-4bb90d39-51ec-4a91-83ff-a9efa2667327.png)
+
+ 
+### For the use of the GPIOs pins and the SPI bus you will need the bcm2835 library:
+
+ ***http://www.airspayce.com/mikem/bcm2835/***
+ 
+ ```
+ $ wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.71.tar.gz
+$ tar zxvf bcm2835-1.71.tar.gz
+$ cd bcm2835-1.71
+$ ./configure
+$ make
+$ sudo make check
+$ sudo make install
+ ```
+ 
+ ### For the use of LoRa, we will use the following library:
+ 
+ ```bash
+ $ git clone https://github.com/hallard/RadioHead
+ ```
+ 
+ You will go to the following library directory:
+ 
+ 
+ ```bash
+ $ cd RadioHead/examples/raspi/rf95
+ ```
+ 
+ You will modify the two source files: "rf95_server.cpp" and "rf95_client.cpp", to select the dragino:
+ 
+ 
+ 
+ ![image](https://user-images.githubusercontent.com/75567246/209677143-21f62c10-b462-4445-8e5f-ef193eceacec.png)
+
+ 
+ Then you will compile and run one of the versions of the software:
+ 
+ ```bash
+ $ make
+$ sudo ./rf95_client
+ ```
+ 
 
 </details>
 
