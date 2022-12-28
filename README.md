@@ -1024,6 +1024,6 @@ def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
  
 ATECC608 and ESP8266 |      Raspberry pi
 :--------------:|:-----------------:
-![]![image](https://user-images.githubusercontent.com/75567246/209819747-8b1dd381-82b1-4eb6-aebd-35a737415a00.png)|![]![image](https://user-images.githubusercontent.com/75567246/209819795-a58314c9-c496-49f4-8f6a-a134213437dc.png)
+![image](https://user-images.githubusercontent.com/75567246/209819747-8b1dd381-82b1-4eb6-aebd-35a737415a00.png)|![image](https://user-images.githubusercontent.com/75567246/209819795-a58314c9-c496-49f4-8f6a-a134213437dc.png)
 
 * https://github.com/cesanta/mongoose-os-docs/blob/master/mongoose-os/userguide/security.md
