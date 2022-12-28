@@ -884,6 +884,44 @@ $ sudo make install
 $ sudo ./rf95_client
  ```
  
+ 
+ ## For the MQTT client we goin to use python pho_mqtt library
+ 
+
+To use MQTT in Python, you can use the paho-mqtt library, which is a client implementation of the MQTT protocol.
+Here is an example of how to use the paho-mqtt library to connect to our ESP8266 server :
+
+
+
+```python
+
+def on_message(client, obj, msg):
+    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    
+    
+
+client_mqtt = mqtt.Client()
+# Assign event callbacks
+client_mqtt.on_message = on_message
+# variables for connexion 
+rasp_key  = "/home/pi/CERTIFICATES/ecc.raspberry.key.pem"
+rasp_cert = "/home/pi/CERTIFICATES/ecc.raspberry.pem"
+ca_cert   = "/home/pi/CERTIFICATES/ecc.ca.pem"
+url = 'mqtt.com'
+port=8883
+topic =  '/esp8266'
+# set uo the variables 
+client_mqtt.username_pw_set("tmc", "iot")
+client_mqtt.tls_set(ca_certs=ca_cert, certfile=rasp_cert, keyfile=rasp_key, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLS, ciphers=None)
+# connect to 
+client_mqtt.connect(url,port)
+client_mqtt.subscribe(topic, 0)
+
+# Network loop 
+while True:
+    client_mqtt.loop()
+
+```
 
 </details>
 
