@@ -894,9 +894,26 @@ Here is an example of how to use the paho-mqtt library to connect to our ESP8266
 
 
 ```python
+#!/bin/python3                                                                                                                                             
+import paho.mqtt.client as mqtt                                                                                                                              import os, ssl, binascii,jwt, base64, subprocess                                                                                                            import aes as AES                                                                                                                                                                      
+                                                                                                                                                                                       
+# generate the key with this cmd line :  xxd -p -l 16 -c 16 /dev/urandom                                                                                                               
+SECRET_KEY=b'b68eca6ee927b3c9a3f133c0a069bb3a'
+iv = b"b845a927fe81d320"
 
+ 
+ 
 def on_message(client, obj, msg):
-    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    ## clair data from mosquitoo_pub
+    data=msg.topic + " " + str(msg.qos) + " " + str(msg.payload)
+    data = str(msg.payload) # encode the data 
+    data = AES.encrypt_AES_GCM(data,SECRET_KEY,iv) ## encrypt with AES
+    ## use rf95 programm to send the Data to onther endPoint LORA
+    data =jwt.encode( {'data':data.decode('utf-8') }, "TMC", algorithm='HS256')
+    cmd = subprocess.Popen("sudo ./RadioHead/examples/raspi/rf95/rf95_client %s "%data, shell=True,stdout=subprocess.PIPE)
+    (resultat, ignorer) = cmd.communicate()
+    #print(resultat)  Data sent 
+
     
     
 
@@ -922,6 +939,49 @@ while True:
     client_mqtt.loop()
 
 ```
+ 
+ 
+ The aes.py file use to encrypt and decrypt the data 
+ 
+ 
+ 
+ ```python
+ #!/usr/bin/python3                                                                                                                                                                     
+from Crypto.Cipher import AES 
+import base64
+
+def pad_string(s: str, block_size: int = 16) -> str:
+    # Calculate the number of padding bytes needed
+    num_padding_bytes = block_size - (len(s) % block_size)
+    # Add the padding bytes to the string
+    padded_s = s + (chr(num_padding_bytes) * num_padding_bytes)
+    return padded_s
+
+
+def unpad_string(s: str) -> str:
+    # Get the number of padding bytes from the last byte of the string
+    num_padding_bytes = ord(s[-1])
+    # Remove the padding bytes from the string
+    unpadded_s = s[:-num_padding_bytes]
+    return unpadded_s
+
+
+def encrypt_AES_GCM(msg, secretkey,iv):
+      aes = AES.new(secretkey, AES.MODE_CBC, iv)
+      padded_data = pad_string(msg,32)
+      encrypted_data = aes.encrypt(padded_data)
+      return base64.b64encode(encrypted_data)
+      #return encrypted_data
+
+def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
+     aes = AES.new(secretkey, AES.MODE_CBC, iv)     
+     encrypted_data = base64.b64decode(encryptedMsg)
+     decrypted_data = aes.decrypt(encrypted_data)
+     decrypted_data = unpad_string(decrypted_data.decode())
+     return decrypted_data
+
+ 
+ ```
 
 </details>
 
