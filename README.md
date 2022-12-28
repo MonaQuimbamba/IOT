@@ -1021,6 +1021,14 @@ def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
  
  
  
+
+<details><summary>Angular+Client MQTT/Websockets web app</summary>
+
+ 
+ TO DO ....
+ 
+ </details>
+ 
  
 ATECC608 and ESP8266 |      Raspberry pi
 :--------------:|:-----------------:
