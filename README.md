@@ -982,6 +982,42 @@ def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
 
  
  ```
+ 
+ 
+ 
+ ### Modify the rf95-client.cpp file to send the data 
+ 
+ 
+ ```cpp
+ 
+         const char* data;
+        std::string str = argv[1];
+        data = str.c_str();
+        uint8_t len = sizeof(data);
+
+        uint8_t* data2send = new uint8_t [len];
+
+        for(int i =0 ; i < len; i++) data2send[i]=data[i];
+
+        printf("Sending %02d bytes to node #%d => ", len, RF_GATEWAY_ID );
+        printbuffer(data2send, len);
+        printf("\n\n\n" );
+        rf95.send(data2send, len);
+        rf95.waitPacketSent();
+        exit(1);
+
+                               
+ ```
+                               
+                               
+  ### Modify the rf95-server.cpp file to recieve the data 
+                               
+                               
+                               
+   ```cpp
+                               
+   
+   ```
 
 </details>
 
