@@ -892,28 +892,24 @@ Here is an example of how to use the paho-mqtt library to connect to our ESP8266
 
 
 ```python
-#!/bin/python3                                                                                                                                             
-import paho.mqtt.client as mqtt                                                                                                                              import os, ssl, binascii,jwt, base64, subprocess                                                                                                            import aes as AES                                                                                                                                                                      
-                                                                                                                                                                                       
-# generate the key with this cmd line :  xxd -p -l 16 -c 16 /dev/urandom                                                                                                               
-SECRET_KEY=b'b68eca6ee927b3c9a3f133c0a069bb3a'
-iv = b"b845a927fe81d320"
+#!/bin/python3
+import paho.mqtt.client as mqtt
+import os, ssl, binascii,jwt, base64, subprocess
+import colorama
+from colorama import Fore
+# generate the key with this cmd line :  xxd -p -l 16 -c 16 /dev/urandom
 
- 
- 
 def on_message(client, obj, msg):
     ## clair data from mosquitoo_pub
     data=msg.topic + " " + str(msg.qos) + " " + str(msg.payload)
-    data = str(msg.payload) # encode the data 
-    data = AES.encrypt_AES_GCM(data,SECRET_KEY,iv) ## encrypt with AES
-    ## use rf95 programm to send the Data to onther endPoint LORA
+    print(Fore.YELLOW +"Data received from ESP8266 => ", data)
+    data =msg.payload 
     data =jwt.encode( {'data':data.decode('utf-8') }, "TMC", algorithm='HS256')
     cmd = subprocess.Popen("sudo ./RadioHead/examples/raspi/rf95/rf95_client %s "%data, shell=True,stdout=subprocess.PIPE)
     (resultat, ignorer) = cmd.communicate()
-    #print(resultat)  Data sent 
+    print(Fore.GREEN+"Data sent via LORA")
+    #print(resultat)  #Data sent 
 
-    
-    
 
 client_mqtt = mqtt.Client()
 # Assign event callbacks
@@ -939,46 +935,28 @@ while True:
 ```
  
  
- The aes.py file use to encrypt and decrypt the data 
+ The server_LORA.py file use to encrypt and decrypt the data 
  
  
  
  ```python
- #!/usr/bin/python3                                                                                                                                                                     
-from Crypto.Cipher import AES 
-import base64
+ #!/bin/python3
+import  subprocess, sys,os
+import colorama
+from colorama import Fore
+import jwt
+data = sys.argv[1] # get data from arg 1 
 
-def pad_string(s: str, block_size: int = 16) -> str:
-    # Calculate the number of padding bytes needed
-    num_padding_bytes = block_size - (len(s) % block_size)
-    # Add the padding bytes to the string
-    padded_s = s + (chr(num_padding_bytes) * num_padding_bytes)
-    return padded_s
+try:
 
+    encoded =jwt.decode(data, "TMC", algorithms=['HS256'])
+    #jwt.decode(data,"TMC", algorithms=['HS256'])
+    print(Fore.GREEN+" data => ",encoded)
+    data=encoded['data']
+    print(Fore.GREEN+" AES Decrypted Data is  ",data)
 
-def unpad_string(s: str) -> str:
-    # Get the number of padding bytes from the last byte of the string
-    num_padding_bytes = ord(s[-1])
-    # Remove the padding bytes from the string
-    unpadded_s = s[:-num_padding_bytes]
-    return unpadded_s
-
-
-def encrypt_AES_GCM(msg, secretkey,iv):
-      aes = AES.new(secretkey, AES.MODE_CBC, iv)
-      padded_data = pad_string(msg,32)
-      encrypted_data = aes.encrypt(padded_data)
-      return base64.b64encode(encrypted_data)
-      #return encrypted_data
-
-def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
-     aes = AES.new(secretkey, AES.MODE_CBC, iv)     
-     encrypted_data = base64.b64decode(encryptedMsg)
-     decrypted_data = aes.decrypt(encrypted_data)
-     decrypted_data = unpad_string(decrypted_data.decode())
-     return decrypted_data
-
- 
+except:
+        exit(1)
  ```
  
  
@@ -987,20 +965,30 @@ def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
  
  
  ```cpp
+         /* A 256 bit key */
+         unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
+         /* A 128 bit IV */
+         unsigned char *iv = (unsigned char *)"0123456789012345";
+        // get data from input 
+        const char* data;
+        unsigned char * plaintext =(unsigned char *) argv[1]; 
+        //data = plaintext.c_str();
+        //uint8_t len = sizeof(data);
+
+         /* Buffer for the decrypted text */
+         unsigned char ciphertext[128];
+         int decryptedtext_len, ciphertext_len;
+        /* Encrypt the plaintext */
+        ciphertext_len = encrypt (plaintext, strlen ((char *)plaintext), key, iv, ciphertext);
  
-         const char* data;
-        std::string str = argv[1];
-        data = str.c_str();
-        uint8_t len = sizeof(data);
 
-        uint8_t* data2send = new uint8_t [len];
-
-        for(int i =0 ; i < len; i++) data2send[i]=data[i];
-
-        printf("Sending %02d bytes to node #%d => ", len, RF_GATEWAY_ID );
-        printbuffer(data2send, len);
+         uint8_t* data2send = new uint8_t [ciphertext_len];
+        for(int i =0 ; i < ciphertext_len; i++) data2send[i]=ciphertext[i];
+                                                                                                
+        printf("Sending %02d bytes to node #%d => ", ciphertext_len, RF_GATEWAY_ID );
+        printbuffer(data2send, ciphertext_len);
         printf("\n\n\n" );
-        rf95.send(data2send, len);
+        rf95.send(data2send, ciphertext_len);
         rf95.waitPacketSent();
         exit(1);
 
@@ -1013,9 +1001,150 @@ def decrypt_AES_GCM(encryptedMsg, secretkey,iv):
                                
                                
    ```cpp
-             TO DO                  
+              if (rf95.recv(buf, &len)) {
+            printf("Packet[%02d] #%d => #%d %ddB:", len, from, to, rssi);
+            printbuffer(buf, len);
+            printf(" \n ");
+
+            unsigned char decryptedtext[128];
+            int decryptedtext_len;
+
+               /* Decrypt the ciphertext */
+        decryptedtext_len = decrypt(buf,len, key, iv,decryptedtext);
+
+    /* Add a NULL terminator. We are expecting printable text */
+         decryptedtext[decryptedtext_len] = '\0';
+
+                /* Show the decrypted text */
+  //    printf("Decrypted text is:\n");
+//        printf("%s\n", decryptedtext);
+
+
+            std::string convert;
+            convert.assign(decryptedtext, decryptedtext+decryptedtext_len);
+            char buffer[512];
+            std::string result = "";
+            std::string str = "python3 server_LORA.py "+convert;
+            const char * command = str.c_str();
+            FILE* pipe = popen(command, "r");
+           if (!pipe) throw std::runtime_error("popen() failed!");
+           try {
+              while (fgets(buffer, sizeof buffer, pipe) != NULL) {
+                      result += buffer;
+              }
+           } catch (std::string const& chaine){
+                   pclose(pipe);
+                   throw;
+          }
+         std::cout << result << std::endl;
+         pclose(pipe);
+
+      
    
    ```
+   
+   AES encrypt
+   
+   ```cpp
+   
+   int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
+            unsigned char *iv, unsigned char *ciphertext)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    int len;
+
+    int ciphertext_len;
+
+    /* Create and initialise the context */
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        handleErrors();
+
+    /*
+     * Initialise the encryption operation. IMPORTANT - ensure you use a key
+     * and IV size appropriate for your cipher
+     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+     * IV size for *most* modes is the same as the block size. For AES this
+     * is 128 bits
+     */
+    if(1!= EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+        handleErrors();
+
+    /*
+     * Provide the message to be encrypted, and obtain the encrypted output.
+     * EVP_EncryptUpdate can be called multiple times if necessary
+     */
+    if(1!= EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len))
+        handleErrors();
+    ciphertext_len = len;
+
+    /*
+     * Finalise the encryption. Further ciphertext bytes may be written at
+     * this stage.
+     */
+    if(1!= EVP_EncryptFinal_ex(ctx, ciphertext + len, &len))
+        handleErrors();
+    ciphertext_len += len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+
+    return ciphertext_len;
+}
+   ```
+   
+   
+   AES decrypt
+   
+   ```cpp
+   
+   
+int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
+            unsigned char *iv, unsigned char *plaintext)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    int len;
+
+    int plaintext_len;
+
+    /* Create and initialise the context */
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        handleErrors();
+
+    /*
+     * Initialise the decryption operation. IMPORTANT - ensure you use a key
+     * and IV size appropriate for your cipher
+     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+     * IV size for *most* modes is the same as the block size. For AES this
+     * is 128 bits
+     */
+    if(1!= EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+        handleErrors();
+
+    /*
+     * Provide the message to be decrypted, and obtain the plaintext output.
+     * EVP_DecryptUpdate can be called multiple times if necessary.
+     */
+    if(1!= EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len))
+        handleErrors();
+    plaintext_len = len;
+
+    /*
+     * Finalise the decryption. Further plaintext bytes may be written at
+     * this stage.
+     */
+    if(1!= EVP_DecryptFinal_ex(ctx, plaintext + len, &len))
+        handleErrors();
+    plaintext_len += len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+
+    return plaintext_len;
+}
+   ```
+   
 
 </details>
  
