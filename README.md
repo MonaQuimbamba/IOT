@@ -1151,11 +1151,8 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
  
  
 
-<details><summary>Angular+Client MQTT/Websockets web app</summary>
-
- 
- TO DO ....
- 
+<details><summary>Video Youtube</summary>
+* https://www.youtube.com/watch?v=i1hnMEcURoM
  </details>
  
  
